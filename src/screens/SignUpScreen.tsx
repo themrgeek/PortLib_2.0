@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef } from "react";
 import {
   View,
   Text,
@@ -8,49 +8,52 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { InputField } from '../components/InputField';
-import { Button } from '../components/Button';
-import { Checkbox } from '../components/Checkbox';
-import { ProgressDots } from '../components/ProgressDots';
-import { colors, spacing, typography } from '../theme/colors';
+} from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { InputField } from "../components/InputField";
+import { Button } from "../components/Button";
+import { Checkbox } from "../components/Checkbox";
+import { ProgressDots } from "../components/ProgressDots";
+import { colors, spacing, typography } from "../theme/colors";
 
 interface SignUpScreenProps {
   navigation: any;
 }
 
-type PasswordStrength = 'weak' | 'medium' | 'strong' | null;
+type PasswordStrength = "weak" | "medium" | "strong" | null;
 
 export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [step, setStep] = useState(1);
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [agreeToTerms, setAgreeToTerms] = useState(false);
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
-  const [passwordStrength, setPasswordStrength] = useState<PasswordStrength>(null);
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [passwordStrength, setPasswordStrength] =
+    useState<PasswordStrength>(null);
   const [passwordMatchError, setPasswordMatchError] = useState(false);
   const otpRefs = useRef<(TextInput | null)[]>([]);
 
   const calculatePasswordStrength = (pwd: string): PasswordStrength => {
     if (pwd.length === 0) return null;
-    if (pwd.length < 6) return 'weak';
-    if (pwd.length < 10) return 'medium';
+    if (pwd.length < 6) return "weak";
+    if (pwd.length < 10) return "medium";
     // Check for complexity
     const hasUpper = /[A-Z]/.test(pwd);
     const hasLower = /[a-z]/.test(pwd);
     const hasNumber = /[0-9]/.test(pwd);
     const hasSpecial = /[^A-Za-z0-9]/.test(pwd);
-    const complexity = [hasUpper, hasLower, hasNumber, hasSpecial].filter(Boolean).length;
-    
-    if (complexity >= 3 && pwd.length >= 10) return 'strong';
-    if (complexity >= 2) return 'medium';
-    return 'weak';
+    const complexity = [hasUpper, hasLower, hasNumber, hasSpecial].filter(
+      Boolean
+    ).length;
+
+    if (complexity >= 3 && pwd.length >= 10) return "strong";
+    if (complexity >= 2) return "medium";
+    return "weak";
   };
 
   const handlePasswordChange = (text: string) => {
@@ -75,7 +78,14 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const handleContinue = () => {
     if (step === 1) {
       // Validate form
-      if (!fullName || !email || !phoneNumber || !studentId || !password || !confirmPassword) {
+      if (
+        !fullName ||
+        !email ||
+        !phoneNumber ||
+        !studentId ||
+        !password ||
+        !confirmPassword
+      ) {
         return;
       }
       if (password !== confirmPassword) {
@@ -91,20 +101,20 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
 
   const handleVerify = () => {
     // Handle OTP verification
-    const otpString = otp.join('');
+    const otpString = otp.join("");
     if (otpString.length === 6) {
-      console.log('OTP verified:', otpString);
+      console.log("OTP verified:", otpString);
       // Navigate to next screen or complete signup
     }
   };
 
   const handleOtpChange = (index: number, value: string) => {
     // Only allow numbers
-    const numericValue = value.replace(/[^0-9]/g, '');
-    
+    const numericValue = value.replace(/[^0-9]/g, "");
+
     if (numericValue.length > 1) {
       // Handle paste
-      const pastedOtp = numericValue.slice(0, 6).split('');
+      const pastedOtp = numericValue.slice(0, 6).split("");
       const newOtp = [...otp];
       pastedOtp.forEach((char, i) => {
         if (index + i < 6) {
@@ -112,12 +122,17 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         }
       });
       setOtp(newOtp);
-      
+
       // Focus the last filled input or next empty
-      const nextEmptyIndex = newOtp.findIndex((val, i) => i >= index && val === '');
+      const nextEmptyIndex = newOtp.findIndex(
+        (val, i) => i >= index && val === ""
+      );
       if (nextEmptyIndex !== -1 && otpRefs.current[nextEmptyIndex]) {
         otpRefs.current[nextEmptyIndex]?.focus();
-      } else if (index + pastedOtp.length < 6 && otpRefs.current[index + pastedOtp.length]) {
+      } else if (
+        index + pastedOtp.length < 6 &&
+        otpRefs.current[index + pastedOtp.length]
+      ) {
         otpRefs.current[index + pastedOtp.length]?.focus();
       }
       return;
@@ -134,7 +149,12 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   };
 
   const handleOtpKeyPress = (index: number, key: string) => {
-    if (key === 'Backspace' && !otp[index] && index > 0 && otpRefs.current[index - 1]) {
+    if (
+      key === "Backspace" &&
+      !otp[index] &&
+      index > 0 &&
+      otpRefs.current[index - 1]
+    ) {
       otpRefs.current[index - 1]?.focus();
     }
   };
@@ -214,7 +234,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         onChangeText={handleConfirmPasswordChange}
         secureTextEntry
         showPasswordToggle
-        error={passwordMatchError ? 'Passwords do not match.' : undefined}
+        error={passwordMatchError ? "Passwords do not match." : undefined}
       />
 
       <Checkbox
@@ -222,7 +242,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         onToggle={() => setAgreeToTerms(!agreeToTerms)}
         label="I agree to the "
         linkText="Terms & Conditions."
-        onLinkPress={() => console.log('Terms pressed')}
+        onLinkPress={() => console.log("Terms pressed")}
       />
 
       <Button title="Continue" onPress={handleContinue} />
@@ -232,10 +252,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const renderStep2 = () => (
     <>
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => setStep(1)}
-        >
+        <TouchableOpacity style={styles.backButton} onPress={() => setStep(1)}>
           <Ionicons name="arrow-back" size={24} color={colors.iconPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Account</Text>
@@ -253,11 +270,15 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         {otp.map((value, index) => (
           <View key={index} style={styles.otpInputWrapper}>
             <TextInput
-              ref={(ref) => (otpRefs.current[index] = ref)}
+              ref={(ref) => {
+                otpRefs.current[index] = ref;
+              }}
               style={styles.otpInput}
               value={value}
               onChangeText={(text) => handleOtpChange(index, text)}
-              onKeyPress={({ nativeEvent }) => handleOtpKeyPress(index, nativeEvent.key)}
+              onKeyPress={({ nativeEvent }) =>
+                handleOtpKeyPress(index, nativeEvent.key)
+              }
               keyboardType="number-pad"
               maxLength={1}
               selectTextOnFocus
@@ -281,7 +302,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   return (
     <SafeAreaView style={styles.container}>
       <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
         <ScrollView
@@ -309,9 +330,9 @@ const styles = StyleSheet.create({
     paddingTop: spacing.lg,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     marginBottom: spacing.md,
   },
   backButton: {
@@ -338,8 +359,8 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xxl,
   },
   otpContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    justifyContent: "space-between",
     marginVertical: spacing.xxxl,
   },
   otpInputWrapper: {
@@ -347,19 +368,19 @@ const styles = StyleSheet.create({
     marginHorizontal: spacing.xs / 2,
   },
   otpInput: {
-    width: '100%',
+    width: "100%",
     height: 45,
     borderWidth: 1,
     borderColor: colors.borderInactive,
     borderRadius: 8,
-    textAlign: 'center',
+    textAlign: "center",
     fontSize: typography.fontSize.xl,
     fontWeight: typography.fontWeight.bold,
     color: colors.textPrimary,
     backgroundColor: colors.background,
   },
   timerContainer: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: spacing.md,
   },
   timerText: {
@@ -367,7 +388,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
   },
   resendButton: {
-    alignItems: 'center',
+    alignItems: "center",
     marginBottom: spacing.md,
   },
   resendButtonText: {
@@ -376,4 +397,4 @@ const styles = StyleSheet.create({
     fontWeight: typography.fontWeight.medium,
   },
 });
-
+export default SignUpScreen;
