@@ -6,12 +6,20 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
+  ScrollView,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { InputField } from "../components/InputField";
 import { Button } from "../components/Button";
 import { colors, spacing, typography } from "../theme/colors";
+import {
+  validateEmailOrPhone,
+  validatePassword,
+  validatePhone,
+} from "../utils/validation";
+import { authService } from "../services/authService";
 
 interface LoginScreenProps {
   navigation: any;
@@ -21,10 +29,109 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
   const [emailOrPhone, setEmailOrPhone] = useState("");
   const [password, setPassword] = useState("");
   const [rememberMe, setRememberMe] = useState(false);
+  const [emailOrPhoneError, setEmailOrPhoneError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleLogin = () => {
-    // Handle login logic
-    console.log("Login pressed");
+  const handleEmailOrPhoneChange = (value: string) => {
+    setEmailOrPhone(value);
+    if (emailOrPhoneError) {
+      const validation = validateEmailOrPhone(value);
+      setEmailOrPhoneError(validation.isValid ? "" : validation.error || "");
+    }
+  };
+
+  const handlePasswordChange = (value: string) => {
+    setPassword(value);
+    if (passwordError) {
+      const validation = validatePassword(value);
+      setPasswordError(validation.isValid ? "" : validation.error || "");
+    }
+  };
+
+  const handleLogin = async () => {
+    // Reset errors
+    setEmailOrPhoneError("");
+    setPasswordError("");
+
+    // Validate email or phone (user can enter either)
+    const emailOrPhoneValidation = validateEmailOrPhone(emailOrPhone);
+    if (!emailOrPhoneValidation.isValid) {
+      setEmailOrPhoneError(emailOrPhoneValidation.error || "");
+      return;
+    }
+
+    // Extract phone number (API expects phone, not email)
+    // If user entered email, we'll need to handle it differently
+    // For now, validate that it's a phone number format
+    const cleanPhone = emailOrPhone.replace(/[\s\-\(\)\+]/g, "");
+    const phoneValidation = validatePhone(emailOrPhone);
+    if (!phoneValidation.isValid) {
+      setEmailOrPhoneError("Please enter a valid phone number for login");
+      return;
+    }
+
+    // Validate password
+    const passwordValidation = validatePassword(password);
+    if (!passwordValidation.isValid) {
+      setPasswordError(passwordValidation.error || "");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      // Login with phone and plaintext password
+      // API endpoint: POST /api/auth/login/password
+      const response = await authService.login({
+        phone: cleanPhone, // API expects phone number
+        password: password, // Plaintext password
+      });
+
+      const token = response.accessToken || response.token;
+      if (!token) {
+        Alert.alert(
+          "Login Failed",
+          "No token returned from server. Please try again."
+        );
+        return;
+      }
+
+      // Token is automatically stored in SecureStore by authService
+      Alert.alert("Success", "Login successful!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Navigate to main app or home screen
+            // navigation.navigate("Home");
+            console.log("Logged in with token:", token);
+          },
+        },
+      ]);
+    } catch (error: any) {
+      // Don't navigate away on error - stay on login screen
+      const errorMessage = error.message || "An error occurred during login";
+
+      // Check if it's a network error
+      if (
+        errorMessage.includes("Network request failed") ||
+        errorMessage.includes("Failed to fetch") ||
+        errorMessage.includes("NetworkError")
+      ) {
+        Alert.alert(
+          "Connection Error",
+          "Unable to connect to the server. Please check:\n\n" +
+            "1. Your backend server is running\n" +
+            "2. You're using the correct API URL\n" +
+            "3. Your device/emulator can reach the server\n\n" +
+            "For physical devices, use your computer's IP address instead of localhost."
+        );
+      } else {
+        Alert.alert("Login Failed", errorMessage);
+      }
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleGoogleLogin = () => {
@@ -43,7 +150,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardView}
       >
-        <View style={styles.contentContainer}>
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.contentContainer}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
           {/* Logo Section */}
           <View style={styles.logoContainer}>
             <View style={styles.logoBox}>
@@ -64,18 +176,20 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               label="Email or Phone"
               placeholder="Enter your email or phone"
               value={emailOrPhone}
-              onChangeText={setEmailOrPhone}
+              onChangeText={handleEmailOrPhoneChange}
               keyboardType="email-address"
               autoCapitalize="none"
+              error={emailOrPhoneError}
             />
 
             <InputField
               label="Password"
               placeholder="Enter your password"
               value={password}
-              onChangeText={setPassword}
+              onChangeText={handlePasswordChange}
               secureTextEntry
               showPasswordToggle
+              error={passwordError}
             />
 
             {/* Remember Me and Forgot Password */}
@@ -108,7 +222,12 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
             </View>
 
             {/* Login Button */}
-            <Button title="Login" onPress={handleLogin} />
+            <Button
+              title="Login"
+              onPress={handleLogin}
+              loading={isLoading}
+              disabled={isLoading}
+            />
 
             {/* Divider */}
             <View style={styles.dividerContainer}>
@@ -152,7 +271,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ navigation }) => {
               </TouchableOpacity>
             </View>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
@@ -169,11 +288,14 @@ const styles = StyleSheet.create({
     flex: 1,
     width: "100%",
   },
-  contentContainer: {
+  scrollView: {
     flex: 1,
+  },
+  contentContainer: {
+    flexGrow: 1,
     paddingHorizontal: spacing.xl,
     paddingVertical: spacing.xxxl,
-    justifyContent: "space-between",
+    paddingBottom: spacing.xxxl * 1.5,
   },
   logoContainer: {
     alignItems: "center",

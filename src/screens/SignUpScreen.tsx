@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
@@ -16,6 +17,16 @@ import { Button } from "../components/Button";
 import { Checkbox } from "../components/Checkbox";
 import { ProgressDots } from "../components/ProgressDots";
 import { colors, spacing, typography } from "../theme/colors";
+import {
+  validateFullName,
+  validateEmail,
+  validatePhone,
+  validateStudentId,
+  validatePassword,
+  validatePasswordMatch,
+  validateOTP,
+} from "../utils/validation";
+import { authService } from "../services/authService";
 
 interface SignUpScreenProps {
   navigation: any;
@@ -36,6 +47,18 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
   const [passwordStrength, setPasswordStrength] =
     useState<PasswordStrength>(null);
   const [passwordMatchError, setPasswordMatchError] = useState(false);
+
+  // Validation errors
+  const [fullNameError, setFullNameError] = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [phoneNumberError, setPhoneNumberError] = useState("");
+  const [studentIdError, setStudentIdError] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [confirmPasswordError, setConfirmPasswordError] = useState("");
+  const [otpError, setOtpError] = useState("");
+  const [agreeToTermsError, setAgreeToTermsError] = useState("");
+
+  const [isLoading, setIsLoading] = useState(false);
   const otpRefs = useRef<(TextInput | null)[]>([]);
 
   const calculatePasswordStrength = (pwd: string): PasswordStrength => {
@@ -56,55 +79,246 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     return "weak";
   };
 
+  const handleFullNameChange = (value: string) => {
+    setFullName(value);
+    if (fullNameError) {
+      const validation = validateFullName(value);
+      setFullNameError(validation.isValid ? "" : validation.error || "");
+    }
+  };
+
+  const handleEmailChange = (value: string) => {
+    setEmail(value);
+    if (emailError) {
+      const validation = validateEmail(value);
+      setEmailError(validation.isValid ? "" : validation.error || "");
+    }
+  };
+
+  const handlePhoneNumberChange = (value: string) => {
+    setPhoneNumber(value);
+    if (phoneNumberError) {
+      const validation = validatePhone(value);
+      setPhoneNumberError(validation.isValid ? "" : validation.error || "");
+    }
+  };
+
+  const handleStudentIdChange = (value: string) => {
+    setStudentId(value);
+    if (studentIdError) {
+      const validation = validateStudentId(value);
+      setStudentIdError(validation.isValid ? "" : validation.error || "");
+    }
+  };
+
   const handlePasswordChange = (text: string) => {
     setPassword(text);
     setPasswordStrength(calculatePasswordStrength(text));
-    if (confirmPassword && text !== confirmPassword) {
-      setPasswordMatchError(true);
-    } else {
+
+    // Clear password match error if passwords match
+    if (confirmPassword && text === confirmPassword) {
       setPasswordMatchError(false);
+      setConfirmPasswordError("");
+    }
+
+    // Validate password
+    if (passwordError) {
+      const validation = validatePassword(text);
+      setPasswordError(validation.isValid ? "" : validation.error || "");
     }
   };
 
   const handleConfirmPasswordChange = (text: string) => {
     setConfirmPassword(text);
-    if (password && text !== password) {
-      setPasswordMatchError(true);
-    } else {
-      setPasswordMatchError(false);
+
+    // Validate password match
+    if (password) {
+      const validation = validatePasswordMatch(password, text);
+      if (validation.isValid) {
+        setPasswordMatchError(false);
+        setConfirmPasswordError("");
+      } else {
+        setPasswordMatchError(true);
+        setConfirmPasswordError(validation.error || "");
+      }
     }
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (step === 1) {
-      // Validate form
+      // Reset all errors
+      setFullNameError("");
+      setEmailError("");
+      setPhoneNumberError("");
+      setStudentIdError("");
+      setPasswordError("");
+      setConfirmPasswordError("");
+      setAgreeToTermsError("");
+
+      // Validate all fields
+      const fullNameValidation = validateFullName(fullName);
+      if (!fullNameValidation.isValid) {
+        setFullNameError(fullNameValidation.error || "");
+      }
+
+      const emailValidation = validateEmail(email);
+      if (!emailValidation.isValid) {
+        setEmailError(emailValidation.error || "");
+      }
+
+      const phoneValidation = validatePhone(phoneNumber);
+      if (!phoneValidation.isValid) {
+        setPhoneNumberError(phoneValidation.error || "");
+      }
+
+      const studentIdValidation = validateStudentId(studentId);
+      if (!studentIdValidation.isValid) {
+        setStudentIdError(studentIdValidation.error || "");
+      }
+
+      const passwordValidation = validatePassword(password);
+      if (!passwordValidation.isValid) {
+        setPasswordError(passwordValidation.error || "");
+      }
+
+      const passwordMatchValidation = validatePasswordMatch(
+        password,
+        confirmPassword
+      );
+      if (!passwordMatchValidation.isValid) {
+        setPasswordMatchError(true);
+        setConfirmPasswordError(passwordMatchValidation.error || "");
+      }
+
+      if (!agreeToTerms) {
+        setAgreeToTermsError("You must agree to the Terms & Conditions");
+      }
+
+      // Check if there are any errors
       if (
-        !fullName ||
-        !email ||
-        !phoneNumber ||
-        !studentId ||
-        !password ||
-        !confirmPassword
+        !fullNameValidation.isValid ||
+        !emailValidation.isValid ||
+        !phoneValidation.isValid ||
+        !studentIdValidation.isValid ||
+        !passwordValidation.isValid ||
+        !passwordMatchValidation.isValid ||
+        !agreeToTerms
       ) {
         return;
       }
-      if (password !== confirmPassword) {
-        setPasswordMatchError(true);
-        return;
+
+      setIsLoading(true);
+
+      try {
+        // Sign up with plaintext password
+        await authService.signUp({
+          fullName: fullName.trim(),
+          email: email.trim().toLowerCase(),
+          phoneNumber: phoneNumber.trim(),
+          studentId: studentId.trim(),
+          password: password, // Plaintext password
+          confirmPassword: confirmPassword, // Send confirmation to backend
+        });
+
+        // Move to OTP verification step
+        setStep(2);
+      } catch (error: any) {
+        // Don't navigate away on error - stay on signup screen
+        const errorMessage =
+          error.message || "An error occurred during sign up";
+
+        // Check if it's a network error
+        if (
+          errorMessage.includes("Network request failed") ||
+          errorMessage.includes("Failed to fetch") ||
+          errorMessage.includes("NetworkError")
+        ) {
+          Alert.alert(
+            "Connection Error",
+            "Unable to connect to the server. Please check:\n\n" +
+              "1. Your backend server is running\n" +
+              "2. You're using the correct API URL\n" +
+              "3. Your device/emulator can reach the server\n\n" +
+              "For physical devices, use your computer's IP address instead of localhost."
+          );
+        } else {
+          Alert.alert("Sign Up Failed", errorMessage);
+        }
+      } finally {
+        setIsLoading(false);
       }
-      if (!agreeToTerms) {
-        return;
-      }
-      setStep(2);
     }
   };
 
-  const handleVerify = () => {
-    // Handle OTP verification
-    const otpString = otp.join("");
-    if (otpString.length === 6) {
-      console.log("OTP verified:", otpString);
-      // Navigate to next screen or complete signup
+  const handleVerify = async () => {
+    setOtpError("");
+
+    // Validate OTP
+    const otpValidation = validateOTP(otp);
+    if (!otpValidation.isValid) {
+      setOtpError(otpValidation.error || "");
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const otpString = otp.join("");
+
+      // Verify signup OTP
+      // API endpoint: POST /api/auth/verify/signup-otp
+      const response = await authService.verifyOTP(otpString);
+
+      const token =
+        response.accessToken || response.token || response.tokens?.accessToken;
+      if (!token) {
+        Alert.alert(
+          "Verification Failed",
+          "No token returned after OTP verification. Please try again."
+        );
+        return;
+      }
+
+      // Token is automatically stored in SecureStore by authService
+      Alert.alert("Success", "Account created successfully!", [
+        {
+          text: "OK",
+          onPress: () => {
+            // Navigate to main app or home screen
+            // navigation.navigate("Home");
+            console.log("Signed up and verified with token:", token);
+          },
+        },
+      ]);
+    } catch (error: any) {
+      // Don't navigate away on error - stay on OTP verification step
+      const errorMessage = error.message || "Invalid OTP. Please try again.";
+
+      // Check if it's a network error
+      if (
+        errorMessage.includes("Network request failed") ||
+        errorMessage.includes("Failed to fetch") ||
+        errorMessage.includes("NetworkError")
+      ) {
+        Alert.alert(
+          "Connection Error",
+          "Unable to connect to the server. Please check:\n\n" +
+            "1. Your backend server is running\n" +
+            "2. You're using the correct API URL\n" +
+            "3. Your device/emulator can reach the server\n\n" +
+            "For physical devices, use your computer's IP address instead of localhost."
+        );
+      } else {
+        Alert.alert("Verification Failed", errorMessage);
+      }
+
+      // Clear OTP on error
+      setOtp(["", "", "", "", "", ""]);
+      if (otpRefs.current[0]) {
+        otpRefs.current[0]?.focus();
+      }
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -159,6 +373,28 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
     }
   };
 
+  const handleResendOTP = async () => {
+    setIsLoading(true);
+    try {
+      // Resend verification OTP
+      // API endpoint: POST /api/auth/resend-verification
+      await authService.resendVerification();
+      Alert.alert("Success", "Verification code has been resent!");
+      // Clear OTP fields
+      setOtp(["", "", "", "", "", ""]);
+      if (otpRefs.current[0]) {
+        otpRefs.current[0]?.focus();
+      }
+    } catch (error: any) {
+      Alert.alert(
+        "Error",
+        error.message || "Failed to resend verification code"
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const renderStep1 = () => (
     <>
       <View style={styles.header}>
@@ -184,8 +420,9 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         icon="person"
         placeholder="Enter your full name"
         value={fullName}
-        onChangeText={setFullName}
+        onChangeText={handleFullNameChange}
         autoCapitalize="words"
+        error={fullNameError}
       />
 
       <InputField
@@ -193,9 +430,10 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         icon="mail"
         placeholder="Enter your email address"
         value={email}
-        onChangeText={setEmail}
+        onChangeText={handleEmailChange}
         keyboardType="email-address"
         autoCapitalize="none"
+        error={emailError}
       />
 
       <InputField
@@ -203,8 +441,9 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         icon="call"
         placeholder="Enter your phone number"
         value={phoneNumber}
-        onChangeText={setPhoneNumber}
+        onChangeText={handlePhoneNumberChange}
         keyboardType="phone-pad"
+        error={phoneNumberError}
       />
 
       <InputField
@@ -212,7 +451,8 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         icon="briefcase"
         placeholder="Enter your student ID"
         value={studentId}
-        onChangeText={setStudentId}
+        onChangeText={handleStudentIdChange}
+        error={studentIdError}
       />
 
       <InputField
@@ -224,6 +464,7 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         secureTextEntry
         showPasswordToggle
         passwordStrength={passwordStrength}
+        error={passwordError}
       />
 
       <InputField
@@ -234,18 +475,33 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         onChangeText={handleConfirmPasswordChange}
         secureTextEntry
         showPasswordToggle
-        error={passwordMatchError ? "Passwords do not match." : undefined}
+        error={
+          confirmPasswordError ||
+          (passwordMatchError ? "Passwords do not match." : undefined)
+        }
       />
+
+      {agreeToTermsError && (
+        <Text style={styles.errorText}>{agreeToTermsError}</Text>
+      )}
 
       <Checkbox
         checked={agreeToTerms}
-        onToggle={() => setAgreeToTerms(!agreeToTerms)}
+        onToggle={() => {
+          setAgreeToTerms(!agreeToTerms);
+          setAgreeToTermsError("");
+        }}
         label="I agree to the "
         linkText="Terms & Conditions."
         onLinkPress={() => console.log("Terms pressed")}
       />
 
-      <Button title="Continue" onPress={handleContinue} />
+      <Button
+        title="Continue"
+        onPress={handleContinue}
+        loading={isLoading}
+        disabled={isLoading}
+      />
     </>
   );
 
@@ -291,11 +547,22 @@ export const SignUpScreen: React.FC<SignUpScreenProps> = ({ navigation }) => {
         <Text style={styles.timerText}>Resend code in 01:59</Text>
       </View>
 
-      <TouchableOpacity style={styles.resendButton}>
+      <TouchableOpacity
+        style={styles.resendButton}
+        onPress={handleResendOTP}
+        disabled={isLoading}
+      >
         <Text style={styles.resendButtonText}>Resend OTP</Text>
       </TouchableOpacity>
 
-      <Button title="Verify" onPress={handleVerify} />
+      {otpError && <Text style={styles.errorText}>{otpError}</Text>}
+
+      <Button
+        title="Verify"
+        onPress={handleVerify}
+        loading={isLoading}
+        disabled={isLoading}
+      />
     </>
   );
 
@@ -395,6 +662,12 @@ const styles = StyleSheet.create({
     fontSize: typography.fontSize.sm,
     color: colors.primary,
     fontWeight: typography.fontWeight.medium,
+  },
+  errorText: {
+    fontSize: typography.fontSize.xs,
+    color: colors.textError,
+    marginTop: -spacing.sm,
+    marginBottom: spacing.sm,
   },
 });
 export default SignUpScreen;
