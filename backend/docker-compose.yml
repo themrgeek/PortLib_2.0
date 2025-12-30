@@ -9,9 +9,13 @@ services:
       - PORT=8000
       - AUTH_USER_SERVICE_URL=http://auth-user:8001
       - AUTH_ADMIN_SERVICE_URL=http://auth-admin:8002
+      - BOOKS_SERVICE_URL=http://books-service:8003
+      - ADMIN_SERVICE_URL=http://admin-service:8004
     depends_on:
       - auth-user
       - auth-admin
+      - books-service
+      - admin-service
 
   auth-user:
     build:
@@ -35,3 +39,24 @@ services:
     environment:
       - PORT=8002
 
+  books-service:
+    build:
+      context: .
+      dockerfile: services/books-service/Dockerfile
+    ports:
+      - "8003:8003"
+    env_file:
+      - .env
+    environment:
+      - PORT=8003
+
+  admin-service:
+    build:
+      context: .
+      dockerfile: services/admin-service/Dockerfile
+    ports:
+      - "8004:8004"
+    env_file:
+      - .env
+    environment:
+      - PORT=8004
