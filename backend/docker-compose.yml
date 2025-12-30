@@ -1,0 +1,37 @@
+services:
+  api-gateway:
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - PORT=8000
+      - AUTH_USER_SERVICE_URL=http://auth-user:8001
+      - AUTH_ADMIN_SERVICE_URL=http://auth-admin:8002
+    depends_on:
+      - auth-user
+      - auth-admin
+
+  auth-user:
+    build:
+      context: .
+      dockerfile: services/auth-user/Dockerfile
+    ports:
+      - "8001:8001"
+    env_file:
+      - .env
+    environment:
+      - PORT=8001
+
+  auth-admin:
+    build:
+      context: .
+      dockerfile: services/auth-admin/Dockerfile
+    ports:
+      - "8002:8002"
+    env_file:
+      - .env
+    environment:
+      - PORT=8002
+
