@@ -1,19 +1,18 @@
-FROM node:22-alpine
+FROM node:20-slim
+
 WORKDIR /app/backend
 
-# Copy package files
-COPY services/admin-service/package.json ./services/admin-service/package.json
-COPY package.json .
+# Copy service package.json to the backend root for installation
+# This ensures shared/ can find node_modules in a parent directory
+COPY services/admin-service/package.json .
+RUN npm install
 
-# Install dependencies
-RUN npm install --prefix ./services/admin-service && \
-    npm install @supabase/supabase-js jsonwebtoken dotenv express cors nodemailer
-
-# Copy code
+# Copy service code and shared code maintaining relative structure
 COPY services/admin-service/ ./services/admin-service/
 COPY shared/ ./shared/
 
 WORKDIR /app/backend/services/admin-service
-EXPOSE 8004
-CMD ["npm", "start"]
 
+EXPOSE 8004
+
+CMD ["npm", "start"]

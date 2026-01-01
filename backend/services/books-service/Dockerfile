@@ -1,19 +1,19 @@
-FROM node:22-alpine
+FROM node:20-slim
+
 WORKDIR /app/backend
 
-# Copy package files
-COPY services/books-service/package.json ./services/books-service/package.json
-COPY package.json .
+# Copy service package.json to the backend root for installation
+# This ensures shared/ can find node_modules in a parent directory
+COPY services/books-service/package.json .
+RUN npm install
 
-# Install dependencies
-RUN npm install --prefix ./services/books-service && \
-    npm install @supabase/supabase-js jsonwebtoken dotenv express cors multer
-
-# Copy code
+# Copy service code and shared code maintaining relative structure
 COPY services/books-service/ ./services/books-service/
 COPY shared/ ./shared/
 
 WORKDIR /app/backend/services/books-service
+
 EXPOSE 8003
+
 CMD ["npm", "start"]
 
