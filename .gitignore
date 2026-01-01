@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 node_modules/
 .expo/
 dist/
@@ -17,4 +18,6 @@ web-build/
 *.log
 *.tmp
 
+=======
+>>>>>>> feature-101/authentication_page_based_on_microservice
 backend/.env

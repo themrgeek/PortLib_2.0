@@ -1,22 +1,19 @@
-<<<<<<< HEAD
-FROM node:22-alpine
-=======
 FROM node:20-slim
->>>>>>> feature-101/authentication_page_based_on_microservice
 
 WORKDIR /app/backend
 
 # Copy service package.json to the backend root for installation
 # This ensures shared/ can find node_modules in a parent directory
-COPY services/auth-user/package.json .
+COPY services/books-service/package.json .
 RUN npm install
 
 # Copy service code and shared code maintaining relative structure
-COPY services/auth-user/ ./services/auth-user/
+COPY services/books-service/ ./services/books-service/
 COPY shared/ ./shared/
 
-WORKDIR /app/backend/services/auth-user
+WORKDIR /app/backend/services/books-service
 
-EXPOSE 8001
+EXPOSE 8003
 
 CMD ["npm", "start"]
+
