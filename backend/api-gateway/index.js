@@ -8,25 +8,17 @@ const PORT = process.env.PORT || 8000;
 
 app.use(cors());
 
-<<<<<<< HEAD
-// Routes
-=======
 // Service URLs
->>>>>>> feature-101/authentication_page_based_on_microservice
 const AUTH_USER_SERVICE_URL =
   process.env.AUTH_USER_SERVICE_URL || "http://localhost:8001";
 const AUTH_ADMIN_SERVICE_URL =
   process.env.AUTH_ADMIN_SERVICE_URL || "http://localhost:8002";
-<<<<<<< HEAD
-
-=======
 const BOOKS_SERVICE_URL =
   process.env.BOOKS_SERVICE_URL || "http://localhost:8003";
 const ADMIN_SERVICE_URL =
   process.env.ADMIN_SERVICE_URL || "http://localhost:8004";
 
 // Auth User routes
->>>>>>> feature-101/authentication_page_based_on_microservice
 app.use(
   "/auth/user",
   createProxyMiddleware({
@@ -38,10 +30,7 @@ app.use(
   })
 );
 
-<<<<<<< HEAD
-=======
 // Auth Admin routes
->>>>>>> feature-101/authentication_page_based_on_microservice
 app.use(
   "/auth/admin",
   createProxyMiddleware({
@@ -53,8 +42,6 @@ app.use(
   })
 );
 
-<<<<<<< HEAD
-=======
 // Books routes
 app.use(
   "/books",
@@ -80,7 +67,6 @@ app.use(
 );
 
 // Health check
->>>>>>> feature-101/authentication_page_based_on_microservice
 app.get("/health", (req, res) => {
   res.status(200).json({ status: "API Gateway is healthy" });
 });

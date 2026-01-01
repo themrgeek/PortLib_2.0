@@ -1,8 +1,4 @@
-<<<<<<< HEAD
 FROM node:22-alpine
-=======
-FROM node:20-slim
->>>>>>> feature-101/authentication_page_based_on_microservice
 
 WORKDIR /app/backend
 
